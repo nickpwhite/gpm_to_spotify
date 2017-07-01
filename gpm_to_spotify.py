@@ -50,23 +50,26 @@ json.dump(songs, out_file, indent=4, sort_keys=True)
 spotify = spotipy.Spotify(auth=token)
 ids = []
 
-for track in songs[2:3]:
+for track in songs:
     album = track[u'album']
     artist = track[u'artist']
     title = track[u'title']
-    print(artist, title, album)
-    query = u"track:{0} artist:{1} album:{2}".format(title.lower(), artist.lower(), album.lower())
+
+    query = u"track:{0} artist:{1}".format(title.split('(')[0].lower(), artist.lower())
     results = spotify.search(query, type='track', limit=1)
+
     json.dump(results, result_file, indent=4, sort_keys=True)
+
     if (results['tracks']['total'] > 0):
         track_id = results['tracks']['items'][0]['id']
+        for result in results['tracks']['items']:
+            if (result['album']['name'] == album):
+                track_id = result['id']
+
         if (len(ids) < 50):
             ids.append(track_id)
-            print(ids)
         else:
-            print("Not adding, for now")
             # spotify.current_user_saved_tracks_add(ids)
             ids = []
     else:
-        print(u"Unable to find {0} by {1} in Spotify's catalogue"
-                .format(title.lower(), artist.lower()))
+        print(u"{0} - {1}".format(title, artist))
