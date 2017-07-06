@@ -37,7 +37,8 @@ def spotify_login():
     return token
 
 def sanitize(string):
-    return re.sub('[-!@#$%^&*=+_;:,.<>?/|]', ' ', string)
+    new = re.sub('[-!@#$%^&*=+_;:<>?/|]', ' ', string)
+    return new.replace("'", '')
 
 def get_track_id(spotify, query):
     results = spotify.search(query, type='track', limit=1)
@@ -47,8 +48,10 @@ def get_track_id(spotify, query):
         for result in results['tracks']['items']:
             if (result['album']['name'] == album):
                 track_id = result['id']
+
+        return track_id
     else:
-        raise Exception('Not found')
+        return None
 
 gpm_api = gpm_login()
 
@@ -56,6 +59,7 @@ token = spotify_login()
 
 out_file = open('out.txt', 'w')
 result_file = open('results.txt', 'w')
+not_added = open('not_added.txt', 'w')
 
 print("Loading all songs from Google Play Music, this might take some time...")
 songs = gpm_api.get_all_songs()
@@ -66,28 +70,30 @@ json.dump(songs, out_file, indent=4, sort_keys=True)
 spotify = spotipy.Spotify(auth=token)
 ids = []
 
-print("Couldn't add:")
+not_added.write("Couldn't add:")
+
 for track in songs:
     album = track[u'album']
     artist = track[u'artist']
     title = track[u'title']
 
-    query = u"track:{0} artist:{1}".format(sanitize(title), sanitize(artist))
-    try:
+    queries = [u"track:{0} artist:{1}".format(sanitize(title), 
+        sanitize(artist.replace('feat.', '').replace('ft.', '').replace('The ', ''))]
+
+    for item in artist.split('&'):
+        queries.append(u"track:{0} artist:{1}".format(sanitize(title.split('(')[0]), sanitize(item)))
+
+    for query in queries:
         track_id = get_track_id(spotify, query)
+        if (track_id is not None):
+            break
+
+    if (track_id is not None):
         ids.append(track_id)
-        if (len(ids) >= 50):
-            print('Adding tracks (not really)')
-            # spotify.current_user_saved_tracks_add(ids)
-            ids = []
-    except Exception:
-        query = u"track{0} artist:{1}".format(sanitize(title.split('(')[0]), sanitize(artist.split('&')[0]))
-        try:
-            track_id = get_track_id(spotify, query)
-            ids.append(track_id)
-            if (len(ids) >= 50):
-                print('Adding tracks (not really)')
-                # spotify.current_user_saved_tracks_add(ids)
-                ids = []
-        except Exception:
-            print(u"{0} - {1} - {2}".format(title, artist, album))
+    else:
+        not_added.write(u"{0} - {1} - {2}".format(title, artist, album))
+
+    if (len(ids) >= 50):
+        print('Adding tracks (not really)')
+        # spotify.current_user_saved_tracks_add(ids)
+        ids = []
