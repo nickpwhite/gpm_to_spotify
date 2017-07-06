@@ -78,7 +78,7 @@ for track in songs:
     title = track[u'title']
 
     queries = [u"track:{0} artist:{1}".format(sanitize(title), 
-        sanitize(artist.replace('feat.', '').replace('ft.', '').replace('The ', ''))]
+        sanitize(artist.replace('feat.', '').replace('ft.', '').replace('The ', '')))]
 
     for item in artist.split('&'):
         queries.append(u"track:{0} artist:{1}".format(sanitize(title.split('(')[0]), sanitize(item)))
