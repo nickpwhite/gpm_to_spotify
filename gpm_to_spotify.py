@@ -37,11 +37,11 @@ def spotify_login():
     return token
 
 def sanitize(string):
-    new = re.sub('[-!@#$%^&*=+_;:<>?/|]', ' ', string)
-    return new.replace("'", '')
+    # new = re.sub('[!@#$%^&*=+_;:<>?|]', '', string)
+    return re.sub('([Ff]t\.)|([Ff]eat\.)|([Ff]eaturing)', '', string)
 
 def get_track_id(spotify, query):
-    results = spotify.search(query, type='track', limit=1)
+    results = spotify.search(query, type='track')
     json.dump(results, result_file, indent=4, sort_keys=True)
     if (results['tracks']['total'] > 0):
         track_id = results['tracks']['items'][0]['id']
@@ -57,6 +57,7 @@ gpm_api = gpm_login()
 
 token = spotify_login()
 
+# Any existing output files with the same name will be overwritten when these are opened
 out_file = open('out.txt', 'w')
 result_file = open('results.txt', 'w')
 not_added = open('not_added.txt', 'w')
@@ -70,7 +71,7 @@ json.dump(songs, out_file, indent=4, sort_keys=True)
 spotify = spotipy.Spotify(auth=token)
 ids = []
 
-not_added.write("Couldn't add:")
+not_added.write("Couldn't add:\n")
 
 for track in songs:
     album = track[u'album']
@@ -78,10 +79,11 @@ for track in songs:
     title = track[u'title']
 
     queries = [u"track:{0} artist:{1}".format(sanitize(title), 
-        sanitize(artist.replace('feat.', '').replace('ft.', '').replace('The ', '')))]
+        sanitize(artist.replace('The ', '').replace("'", '')))]
 
     for item in artist.split('&'):
-        queries.append(u"track:{0} artist:{1}".format(sanitize(title.split('(')[0]), sanitize(item)))
+        queries.append(u"track:{0} artist:{1}".format(sanitize(title.split('(')[0]), 
+            sanitize(item.replace('The ', '').replace("'", ''))))
 
     for query in queries:
         track_id = get_track_id(spotify, query)
@@ -91,7 +93,11 @@ for track in songs:
     if (track_id is not None):
         ids.append(track_id)
     else:
-        not_added.write(u"{0} - {1} - {2}".format(title, artist, album))
+        try:
+            not_added.write(u"{0} - {1} - {2}\n".format(title, artist, album).encode('utf8'))
+        except Exception as e:
+            print(e)
+            print(u"{0} - {1} - {2}\n".format(title, artist, album))
 
     if (len(ids) >= 50):
         print('Adding tracks (not really)')
