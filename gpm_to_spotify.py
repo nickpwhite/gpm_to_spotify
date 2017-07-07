@@ -38,11 +38,14 @@ def spotify_login():
 
 def sanitize(string):
     # new = re.sub('[!@#$%^&*=+_;:<>?|]', '', string)
-    return re.sub('([Ff]t\.)|([Ff]eat\.)|([Ff]eaturing)', '', string)
+    return re.sub('([Ff][Tt]\.)|([Ff][Ee][Aa][Tt]\.)|([Ff]eaturing)', '', string)
 
 def get_track_id(spotify, query):
     results = spotify.search(query, type='track')
     json.dump(results, result_file, indent=4, sort_keys=True)
+    if (results == None):
+        print(query)
+        return None
     if (results['tracks']['total'] > 0):
         track_id = results['tracks']['items'][0]['id']
         for result in results['tracks']['items']:
@@ -100,6 +103,5 @@ for track in songs:
             print(u"{0} - {1} - {2}\n".format(title, artist, album))
 
     if (len(ids) >= 50):
-        print('Adding tracks (not really)')
-        # spotify.current_user_saved_tracks_add(ids)
+        spotify.current_user_saved_tracks_add(ids)
         ids = []
